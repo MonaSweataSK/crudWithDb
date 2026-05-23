@@ -1,4 +1,4 @@
-const { VALID_STATUSES, VALID_PRIORITIES } = require('./constants');
+const { VALID_STATUSES, VALID_PRIORITIES, VALID_CATEGORIES } = require('./constants');
 
 function isValidDateString(value) {
   return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
@@ -19,6 +19,10 @@ function validateTaskBody(body) {
 
   if (body.priority !== undefined && !VALID_PRIORITIES.includes(body.priority)) {
     return `Invalid priority value. Expected one of: ${VALID_PRIORITIES.join(', ')}`;
+  }
+
+  if (body.category !== undefined && !VALID_CATEGORIES.includes(body.category)) {
+    return `Invalid category value. Expected one of: ${VALID_CATEGORIES.join(', ')}`;
   }
 
   if (body.dueDate !== undefined && !isValidDateString(body.dueDate)) {

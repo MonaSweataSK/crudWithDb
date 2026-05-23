@@ -1,9 +1,10 @@
 const http = require('http');
-const crypto = require('crypto');
 const { initDatabase, readTasks, writeTasks } = require('./lib/tasksStore');
 const { validateTaskBody } = require('./lib/taskValidation');
+const { buildTaskFromBody } = require('./lib/taskFactory');
 
 const PORT = 5000;
+const MAX_BODY_SIZE = 1_000_000; // 1MB
 
 // Helper to read request body
 function getRequestBody(req) {
@@ -11,6 +12,10 @@ function getRequestBody(req) {
     let body = '';
     req.on('data', chunk => {
       body += chunk.toString();
+      if (body.length > MAX_BODY_SIZE) {
+        reject(new Error('Request body too large'));
+        req.socket.destroy();
+      }
     });
     req.on('end', () => {
       try {
@@ -29,20 +34,6 @@ function getRequestBody(req) {
 function sendJSONResponse(res, statusCode, data) {
   res.writeHead(statusCode, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify(data));
-}
-
-function buildTaskFromBody(body) {
-  const now = new Date().toISOString();
-  return {
-    id: 'task-' + crypto.randomUUID(),
-    title: body.title.trim(),
-    description: (body.description || '').trim(),
-    status: body.status || 'todo',
-    priority: body.priority || 'medium',
-    category: body.category || 'work',
-    dueDate: body.dueDate || now.split('T')[0],
-    createdAt: now
-  };
 }
 
 async function createTask(body) {
