@@ -13,12 +13,12 @@ function validateTaskBody(body) {
     return 'Task title is required';
   }
 
-  if (body.status !== undefined && !validStatuses.includes(body.status)) {
-    return `Invalid status value. Expected one of: ${validStatuses.join(', ')}`;
+  if (body.status !== undefined && !VALID_STATUSES.includes(body.status)) {
+    return `Invalid status value. Expected one of: ${VALID_STATUSES.join(', ')}`;
   }
 
-  if (body.priority !== undefined && !validPriorities.includes(body.priority)) {
-    return `Invalid priority value. Expected one of: ${validPriorities.join(', ')}`;
+  if (body.priority !== undefined && !VALID_PRIORITIES.includes(body.priority)) {
+    return `Invalid priority value. Expected one of: ${VALID_PRIORITIES.join(', ')}`;
   }
 
   if (body.dueDate !== undefined && !isValidDateString(body.dueDate)) {

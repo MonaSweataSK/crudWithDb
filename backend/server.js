@@ -88,6 +88,7 @@ const server = http.createServer(async (req, res) => {
       
       // Parse query params for filtering
       const statusFilter = parsedUrl.searchParams.get('status');
+      const priorityFilter = parsedUrl.searchParams.get('priority');
       const searchFilter = parsedUrl.searchParams.get('q');
       const categoryFilter = parsedUrl.searchParams.get('category');
       
@@ -95,6 +96,10 @@ const server = http.createServer(async (req, res) => {
       
       if (statusFilter) {
         filteredTasks = filteredTasks.filter(t => t.status === statusFilter);
+      }
+      
+      if (priorityFilter) {
+        filteredTasks = filteredTasks.filter(t => t.priority === priorityFilter);
       }
       
       if (categoryFilter) {

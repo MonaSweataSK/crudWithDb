@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import TaskBoard from './components/TaskBoard';
 import TaskForm from './components/TaskForm';
 import Toast from './components/Toast';
@@ -15,20 +15,20 @@ export default function App() {
   const [loading, setLoading] = useState(true);
 
   // Toast Helpers
-  const addToast = (message, type = 'info') => {
+  const removeToast = useCallback((id) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  }, []);
+
+  const addToast = useCallback((message, type = 'info') => {
     const id = Date.now();
     setToasts(prev => [...prev, { id, message, type }]);
     setTimeout(() => {
-      removeToast(id);
+      setToasts(prev => prev.filter(t => t.id !== id));
     }, 4000);
-  };
-
-  const removeToast = (id) => {
-    setToasts(prev => prev.filter(t => t.id !== id));
-  };
+  }, []);
 
   // Fetch all tasks from backend API
-  const fetchTasks = async () => {
+  const fetchTasks = useCallback(async () => {
     setLoading(true);
     try {
       // Build query string if filters are selected
@@ -49,12 +49,12 @@ export default function App() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [categoryFilter, priorityFilter, addToast]);
 
   // Fetch tasks on initial render and filter changes
   useEffect(() => {
     fetchTasks();
-  }, [categoryFilter, priorityFilter]);
+  }, [fetchTasks]);
 
   // Create or Update task
   const handleFormSubmit = async (taskData) => {
