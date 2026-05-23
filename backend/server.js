@@ -1,6 +1,6 @@
 const http = require('http');
 const { initDatabase, readTasks, writeTasks } = require('./lib/tasksStore');
-const { validateTaskBody } = require('./lib/taskValidation');
+const { validateTaskBody, validateTaskUpdateBody } = require('./lib/taskValidation');
 const { buildTaskFromBody } = require('./lib/taskFactory');
 
 const PORT = 5000;
@@ -150,6 +150,12 @@ const server = http.createServer(async (req, res) => {
       const taskId = match[1];
       try {
         const body = await getRequestBody(req);
+        const validationError = validateTaskUpdateBody(body);
+        if (validationError) {
+          sendJSONResponse(res, 400, { error: validationError });
+          return;
+        }
+
         const tasks = await readTasks();
         const taskIndex = tasks.findIndex(t => t.id === taskId);
         
@@ -168,12 +174,6 @@ const server = http.createServer(async (req, res) => {
           category: body.category !== undefined ? body.category : tasks[taskIndex].category,
           dueDate: body.dueDate !== undefined ? body.dueDate : tasks[taskIndex].dueDate
         };
-        
-        // Title validation if updated
-        if (body.title !== undefined && updatedTask.title === '') {
-          sendJSONResponse(res, 400, { error: 'Task title cannot be empty' });
-          return;
-        }
         
         tasks[taskIndex] = updatedTask;
         const success = await writeTasks(tasks);

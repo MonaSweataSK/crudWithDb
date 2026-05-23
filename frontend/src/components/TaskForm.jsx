@@ -93,7 +93,6 @@ export default function TaskForm({ task, onSubmit, onClose }) {
               >
                 <option value="work">Work</option>
                 <option value="personal">Personal</option>
-                <option value="shopping">Shopping</option>
                 <option value="other">Other</option>
               </select>
             </div>

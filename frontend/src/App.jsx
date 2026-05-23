@@ -7,6 +7,7 @@ const API_BASE = 'http://localhost:5000/api';
 
 export default function App() {
   const [tasks, setTasks] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -156,11 +157,20 @@ export default function App() {
   };
 
 
-  // Calculate statistics
-  const totalCount = tasks.length;
-  const todoCount = tasks.filter(t => t.status === 'todo').length;
-  const progressCount = tasks.filter(t => t.status === 'in-progress').length;
-  const completedCount = tasks.filter(t => t.status === 'completed').length;
+  const filteredTasks = tasks.filter((task) => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return true;
+    return (
+      task.title.toLowerCase().includes(query) ||
+      task.description.toLowerCase().includes(query)
+    );
+  });
+
+  // Calculate statistics for the currently visible task set
+  const totalCount = filteredTasks.length;
+  const todoCount = filteredTasks.filter(t => t.status === 'todo').length;
+  const progressCount = filteredTasks.filter(t => t.status === 'in-progress').length;
+  const completedCount = filteredTasks.filter(t => t.status === 'completed').length;
 
   return (
     <div className="container">
@@ -203,6 +213,21 @@ export default function App() {
       {/* CONTROLS (SEARCH & FILTERS) */}
       <section className="controls-bar">
         <div className="search-filter-group">
+          <div className="search-wrapper">
+            <svg className="search-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="7"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input
+              className="search-input"
+              type="search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search tasks..."
+              aria-label="Search tasks"
+            />
+          </div>
+
           <select
             className="select-filter glass"
             value={categoryFilter}
@@ -251,7 +276,7 @@ export default function App() {
         </div>
       ) : (
         <TaskBoard
-          tasks={tasks}
+          tasks={filteredTasks}
           onDelete={handleDeleteTask}
           onEdit={openEditModal}
           onStatusChange={handleStatusChange}
