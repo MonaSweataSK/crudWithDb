@@ -1,46 +1,9 @@
 const http = require('http');
-const fs = require('fs').promises;
-const path = require('path');
 const crypto = require('crypto');
+const { initDatabase, readTasks, writeTasks } = require('./lib/tasksStore');
+const { validateTaskBody } = require('./lib/taskValidation');
 
 const PORT = 5000;
-const DATA_FILE = path.join(__dirname, 'data', 'tasks.json');
-
-// Helper to ensure data directory and file exist
-async function initDatabase() {
-  try {
-    await fs.mkdir(path.dirname(DATA_FILE), { recursive: true });
-    try {
-      await fs.access(DATA_FILE);
-    } catch {
-      await fs.writeFile(DATA_FILE, JSON.stringify([], null, 2));
-    }
-  } catch (error) {
-    console.error('Failed to initialize database file:', error);
-  }
-}
-
-// Helper to read tasks
-async function readTasks() {
-  try {
-    const data = await fs.readFile(DATA_FILE, 'utf8');
-    return JSON.parse(data);
-  } catch (error) {
-    console.error('Error reading tasks file:', error);
-    return [];
-  }
-}
-
-// Helper to write tasks
-async function writeTasks(tasks) {
-  try {
-    await fs.writeFile(DATA_FILE, JSON.stringify(tasks, null, 2));
-    return true;
-  } catch (error) {
-    console.error('Error writing tasks file:', error);
-    return false;
-  }
-}
 
 // Helper to read request body
 function getRequestBody(req) {
@@ -66,6 +29,38 @@ function getRequestBody(req) {
 function sendJSONResponse(res, statusCode, data) {
   res.writeHead(statusCode, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify(data));
+}
+
+function buildTaskFromBody(body) {
+  const now = new Date().toISOString();
+  return {
+    id: 'task-' + crypto.randomUUID(),
+    title: body.title.trim(),
+    description: (body.description || '').trim(),
+    status: body.status || 'todo',
+    priority: body.priority || 'medium',
+    category: body.category || 'work',
+    dueDate: body.dueDate || now.split('T')[0],
+    createdAt: now
+  };
+}
+
+async function createTask(body) {
+  const validationError = validateTaskBody(body);
+  if (validationError) {
+    return { error: validationError };
+  }
+
+  const tasks = await readTasks();
+  const newTask = buildTaskFromBody(body);
+  tasks.push(newTask);
+
+  const success = await writeTasks(tasks);
+  if (!success) {
+    return { error: 'Failed to write task database', serverError: true };
+  }
+
+  return { task: newTask };
 }
 
 // Main request handler
@@ -139,33 +134,15 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && pathname === '/api/tasks') {
       try {
         const body = await getRequestBody(req);
-        
-        // Validation
-        if (!body.title || body.title.trim() === '') {
-          sendJSONResponse(res, 400, { error: 'Task title is required' });
+        const result = await createTask(body);
+
+        if (result.error) {
+          const status = result.serverError ? 500 : 400;
+          sendJSONResponse(res, status, { error: result.error });
           return;
         }
-        
-        const tasks = await readTasks();
-        const newTask = {
-          id: 'task-' + crypto.randomUUID(),
-          title: body.title.trim(),
-          description: (body.description || '').trim(),
-          status: body.status || 'todo',
-          priority: body.priority || 'medium',
-          category: body.category || 'work',
-          dueDate: body.dueDate || new Date().toISOString().split('T')[0],
-          createdAt: new Date().toISOString()
-        };
-        
-        tasks.push(newTask);
-        const success = await writeTasks(tasks);
-        
-        if (success) {
-          sendJSONResponse(res, 201, newTask);
-        } else {
-          sendJSONResponse(res, 500, { error: 'Failed to write task database' });
-        }
+
+        sendJSONResponse(res, 201, result.task);
       } catch (err) {
         sendJSONResponse(res, 400, { error: err.message });
       }
